@@ -1,0 +1,16 @@
+# Secrets
+.env
+.env.*
+credentials.json
+sneakleak_credentials.json
+
+# Generated output
+sneakleak_*.json
+sneakleak_*.txt
+sneakleak_*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/

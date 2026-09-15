@@ -13,37 +13,71 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Any
 from collections import defaultdict
 import argparse
+from pathlib import Path
 
 # ============================================================================
 # API CONFIGURATIONS
 # ============================================================================
 
+def _load_api_credentials():
+    config_path = Path(
+        os.environ.get(
+            "SNEAKLEAK_CONFIG",
+            Path.home() / ".config" / "sneakleak" / "credentials.json"
+        )
+    )
+
+    credentials = {}
+
+    if config_path.exists():
+        try:
+            with config_path.open("r", encoding="utf-8") as f:
+                credentials.update(json.load(f))
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    env_overrides = {
+        "breach_bot": os.getenv("BREACH_BOT_API_KEY"),
+        "breach_directory": os.getenv("BREACH_DIRECTORY_API_KEY"),
+        "hibp": os.getenv("HIBP_API_KEY"),
+        "leakinsight": os.getenv("RAPIDAPI_KEY"),
+    }
+
+    for name, value in env_overrides.items():
+        if value:
+            credentials[name] = value
+
+    return credentials
+
+
+_API_KEYS = _load_api_credentials()
+
 API_CONFIGS = {
     'breach_bot': {
         'name': 'Breach Bot Telegram',
         'url': 'https://leakosintapi.com/',
-        'key': 'YOUR_BREACH_BOT_API_KEY_HEREs',  # Terrorbyte key for all searches
+        'key': _API_KEYS.get('breach_bot', ''),  # Terrorbyte key for all searches
         'supports': ['email', 'phone', 'domain', 'username', 'name', 'ip'],
         'has_credits': False
     },
     'breach_directory': {
         'name': 'Breach Directory',
         'url': 'https://BreachDirectory.com/api_usage',
-        'key': 'YOUR_BREACH_DIRECTORY_API_KEY_HERE',
+        'key': _API_KEYS.get('breach_directory', ''),
         'supports': ['email', 'domain', 'username', 'ip', 'name'],
         'has_credits': False
     },
     'hibp': {
         'name': 'Have I Been Pwned',
         'url': 'https://haveibeenpwned.com/api/v3',
-        'key': 'YOUR_HIBP_API_KEY_HERE',
+        'key': _API_KEYS.get('hibp', ''),
         'supports': ['email'],
         'has_credits': True
     },
     'leakinsight': {
         'name': 'LeakInsight API',
         'url': 'https://leakinsight-api.p.rapidapi.com/general/',
-        'key': 'YOUR_RAPIDAPI_KEY_HERE',
+        'key': _API_KEYS.get('leakinsight', ''),
         'host': 'leakinsight-api.p.rapidapi.com',
         'supports': ['email', 'phone', 'domain', 'username', 'name', 'ip', 'hash', 'password'],
         'has_credits': False
@@ -208,7 +242,9 @@ def search_breach_bot(query: str, query_type: str, debug: bool = False) -> Dict[
         if debug:
             print(f"\n[DEBUG] Breach Bot Request:")
             print(f"  URL: {API_CONFIGS['breach_bot']['url']}")
-            print(f"  Payload: {json.dumps(payload, indent=2)}")
+            debug_payload = dict(payload)
+            debug_payload['token'] = '***REDACTED***'
+            print(f"  Payload: {json.dumps(debug_payload, indent=2)}")
         
         response = requests.post(
             API_CONFIGS['breach_bot']['url'],
